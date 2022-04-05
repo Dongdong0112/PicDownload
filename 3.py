@@ -10,12 +10,16 @@
 @WeChat     :ZhangHiDg
 '''
 
-import re, os, time, json, requests, configparser, sys, argparse,logging
-# 2
-from retrying import retry
-from werkzeug.urls import url_quote
-import unicodedata
-
+import argparse
+import configparser
+import json
+import os
+import re
+import requests
+import sys
+import time
+from PIL import Image as img
+from tqdm import tqdm
 
 class TuKu():
     # 初始化
@@ -37,7 +41,7 @@ class TuKu():
         print('\r')
 
         # 保存路径       # 图片地址
-        self.save = '';
+        self.save = ''
         self.picurl = ''
 
         # 检测配置文件
@@ -58,7 +62,7 @@ class TuKu():
             except:
                 input('[  提示  ]:生成失败,正在为您下载配置文件!\r')
                 r = requests.get(
-                    'https://raw.githubusercontent.com/Dongdong0112/PicDownload/main/conf.ini')  # 暂时用GitHub 应用Gitee
+                    'https://raw.githubusercontent.com/Dongdong0112/PicDownload/main/conf.ini')  # 暂时用GitHub 可用Gitee
                 with open("conf.ini", "a+") as conf:
                     conf.write(r.content)
                 sys.exit()
@@ -84,10 +88,10 @@ class TuKu():
                 print('[  警告  ]:--user不能为空')
                 pass
             else:
-                self.picurl = picurl;
+                self.picurl = picurl
                 self.save = dir
                 print('[  提示  ]:读取命令完成!\r')
-                self.get_info()
+                self.judge_link()
         # 没有接收到命令
         else:
             print('[  警告  ]:未检测到命令，将使用配置文件进行批量下载!')
@@ -100,7 +104,7 @@ class TuKu():
 
             print('[  提示  ]:读取本地配置完成!\r')
             input('[  提示  ]:按回车启动：')
-            print("#" * 120)
+            print("-" * 120)
             self.judge_link()
 
     # 匹配粘贴的url地址
@@ -111,24 +115,42 @@ class TuKu():
 
     # 替换不能用于文件名的字符
     # 文件二次命名 命名方式为 文案+作者id
-    def clean_filename(self, string, author_id):
+    def clean_filename(self, string):
         rstr = r"[\/\\\:\*\?\"\<\>\|]"  # '/ \ : * ? " < > |'   # re.sub(r'[\\/:*?"<>|\r\n]
         new_title = re.sub(rstr, " ", string)  # 替换为空格
-        filename = new_title + ' ' + author_id
+        filename = new_title
         return filename
 
+    # 对图片进行转换
+    def conversion(self):
+        img_list = os.listdir(self.save)
+        for n, filename in tqdm(enumerate(img_list), total=len(img_list)):
+            # print(filename)
+            info = os.path.splitext(filename)
+            if info[1] != '.png':
+                png = img.open(self.save + filename)
+                temp = info[0].split('.')  # 在 ‘.’ 处分割字符串
+                png.save(self.save + temp[0] + ".png")  # 转换jpg格式就写 “.jpg”
+            time.sleep(1)
+            if info[1] == '.webp':
+                path = self.save + "\\" + filename
+                os.remove(path)
+            time.sleep(0.5)
     # 处理url
     def judge_link(self):
         try:
             url_list = self.find(self.picurl)
             total_urls = len(url_list)
             print('[  提示  ]:本次共有%d个链接\r' % total_urls)
-            print('-' * 120)
             for counts in range(len(url_list)):
                 count = 0
                 count = counts + 1
+                time.sleep(0.3)
+                print('>' * 120)
+                print('-' * 120)
                 print('当前为%d个链接\r' % count)
                 self.get_info(url_list[counts])
+                self.conversion()
         except Exception as e:
             self.error_do(e, 'judge_link', url_list)
 
@@ -161,6 +183,14 @@ class TuKu():
                 image_music = str(js['item_list'][0]['music']['play_url']['url_list'][0])
                 # 图集标题
                 image_title = str(js['item_list'][0]['desc'])
+                # 第一次处理名称
+                new_image_title = ''.join(image_title.splitlines())
+                '''
+                if len(new_image_title) > 182:
+                    print("[  提示  ]:", "文件名称太长 进行截取")
+                    new_image_title = image_title[0:180]
+                    print("[  提示  ]:", "截取后的文案：{0}，长度：{1}".format(new_image_title], len(new_image_title)))
+                '''
                 # 图集作者昵称
                 image_author = str(js['item_list'][0]['author']['nickname'])
                 # 图集作者抖音号
@@ -174,7 +204,7 @@ class TuKu():
                     images_url.append(data['url_list'][0])
                 # 图片数量
                 image_num = len(images_url)
-                image_info = [images_url, image_music, image_title, image_author, image_author_id, original_url, image_num]
+                image_info = [images_url, image_music, image_title, image_author, image_author_id, original_url, image_num,new_image_title]
                 # 输出具体信息
                 print("作品信息")
                 print("文案：" + image_title)
@@ -182,15 +212,15 @@ class TuKu():
                 print("作者id：" + image_author_id)
                 print('图片数量：%d张\r' % image_num)
                 print('-' * 120)
-                print('#' * 120)
-                # print(image_music)差作品时间
-                return self, image_info, api_url
+                # print(image_music) 差作品时间
+                self.image_download(image_info,images_url)
+                return self, image_info, images_url, api_url
             except:
                 print("当前链接非图片链接，请确认后再解析！")
         except Exception as e:
             self.error_do(e, 'get_info', original_url)
-    '''
-    def image_download(self):
+
+    def image_download(self,image_info,image_url):
         try:
             # 创建并检测下载目录是否存在
             try:
@@ -198,11 +228,37 @@ class TuKu():
             except:
                 pass
             # 尝试下载图片
-            try:
-                image =
+            for i in range(len(image_url)):
+                try:
+                    a = i + 1
+                    image = requests.get(image_url[i])
+                    start = time.time()                                  # 下载开始时间
+                    size = 0                                             # 初始化已下载大小
+                    chunk_size = 1024                                    # 每次下载的数据大小
+                    content_size = int(image.headers['content-length'])  # 下载文件总大小
+                    try:
+                        if image.status_code == 200:  # 判断是否响应成功
+                            print('[  图片  ]:' + image_info[2] + '%s'%a + '[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024))  # 开始下载，显示下载文件大小
+                            v_url = self.save + "\\" + self.clean_filename(image_info[7]) + '%s'%a + '.webp'
+                            with open(v_url, 'wb') as file:  # 显示进度条
+                                for data in image.iter_content(chunk_size=chunk_size):
+                                    file.write(data)
+                                    size += len(data)
+                                    print('\r' + '[下载进度]:%s%.2f%%' % (
+                                        '>' * int(size * 50 / content_size), float(size / content_size * 100)), end=' ')
+                                end = time.time()  # 下载结束时间
+                                print('\n' + '[下载完成]:耗时: %.2f秒\n' % (
+                                        end - start))  # 输出下载用时时间
+                    except Exception as e:
+                        print(e)
+                        print('----[  警告  ]:图片下载出错!')
+                        print('----[  警告  ]:', e, '\r')
+
+                except Exception as e :
+                    pass
         except Exception as e:
-            print(e)
-    '''
+            self.error_do(e, 'image_download')
+
 
 
 
@@ -211,6 +267,7 @@ if __name__ == "__main__":
     def get_args(picurl,dir):
         RTK = TuKu()
         RTK.setting(picurl,dir)
+        input('[  完成  ]:已完成批量下载，输入任意键后退出:')
         sys.exit(0)
     try:
         parser = argparse.ArgumentParser(description='TikTokMulti V1.2.5 使用帮助')

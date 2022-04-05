@@ -10,12 +10,16 @@
 @WeChat     :ZhangHiDg
 '''
 
-import re, os, time, json, requests, configparser, sys, argparse,logging
-# 2
-from retrying import retry
-from werkzeug.urls import url_quote
-import unicodedata
-
+import argparse
+import configparser
+import json
+import os
+import re
+import requests
+import sys
+import time
+from PIL import Image as img
+from tqdm import tqdm
 
 class TuKu():
     # 初始化
@@ -58,7 +62,7 @@ class TuKu():
             except:
                 input('[  提示  ]:生成失败,正在为您下载配置文件!\r')
                 r = requests.get(
-                    'https://raw.githubusercontent.com/Dongdong0112/PicDownload/main/conf.ini')  # 暂时用GitHub 应用Gitee
+                    'https://raw.githubusercontent.com/Dongdong0112/PicDownload/main/conf.ini')  # 暂时用GitHub 可用Gitee
                 with open("conf.ini", "a+") as conf:
                     conf.write(r.content)
                 sys.exit()
@@ -117,6 +121,21 @@ class TuKu():
         filename = new_title
         return filename
 
+    # 对图片进行转换
+    def conversion(self):
+        img_list = os.listdir(self.save)
+        for n, filename in tqdm(enumerate(img_list), total=len(img_list)):
+            # print(filename)
+            info = os.path.splitext(filename)
+            if info[1] != '.png':
+                png = img.open(self.save + filename)
+                temp = info[0].split('.')  # 在 ‘.’ 处分割字符串
+                png.save(self.save + temp[0] + ".png")  # 转换jpg格式就写 “.jpg”
+            time.sleep(0.1)
+            if info[1] == '.webp':
+                path = self.save + "\\" + filename
+                os.remove(path)
+            time.sleep(0.1)
     # 处理url
     def judge_link(self):
         try:
@@ -131,6 +150,7 @@ class TuKu():
                 print('-' * 120)
                 print('当前为%d个链接\r' % count)
                 self.get_info(url_list[counts])
+                self.conversion()
         except Exception as e:
             self.error_do(e, 'judge_link', url_list)
 
@@ -247,6 +267,7 @@ if __name__ == "__main__":
     def get_args(picurl,dir):
         RTK = TuKu()
         RTK.setting(picurl,dir)
+        input('[  完成  ]:已完成批量下载，输入任意键后退出:')
         sys.exit(0)
     try:
         parser = argparse.ArgumentParser(description='TikTokMulti V1.2.5 使用帮助')
