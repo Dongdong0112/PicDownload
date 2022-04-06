@@ -1,5 +1,7 @@
 # PicDownload.
 
+抖音图库解析下载
+
 运行TuKuDownload.py 文件
 
 记得导入库
