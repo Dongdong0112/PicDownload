@@ -2,9 +2,9 @@
 # -*- encoding: utf-8 -*-
 '''
 @Description:TukuDownload.py
-@Date       :2022/04/01 20:23:37
+@Date       :2022/04/05 20:23:37
 @Author     :Dongdong
-@version    :1.0
+@version    :1.1.3
 @License    :(C)Copyright 2021-2022
 @Mail       :2638415826@qq.com
 @WeChat     :ZhangHiDg
@@ -32,7 +32,7 @@ class TuKu():
         print("#" * 120)
         print(
             """
-                                        TuKuDownload V1.0
+                                        TuKuDownload V1.1.3
                     使用说明：
                             1、运行软件前先打开目录下 conf.ini 文件按照要求进行配置
             """
@@ -40,9 +40,12 @@ class TuKu():
         print("#" * 120)
         print('\r')
 
-        # 保存路径       # 图片地址
+        # 保存路径
         self.save = ''
+        # 图片地址
         self.picurl = ''
+        # 判断是否跳过
+        self.jump = ''
 
         # 检测配置文件
         if os.path.isfile("conf.ini") == True:
@@ -94,7 +97,7 @@ class TuKu():
                 self.judge_link()
         # 没有接收到命令
         else:
-            print('[  警告  ]:未检测到命令，将使用配置文件进行批量下载!')
+            # print('[  警告  ]:未检测到命令，将使用配置文件进行批量下载!')
 
             # 读取保存路径
             self.save = self.cf.get("save", "address")
@@ -110,6 +113,7 @@ class TuKu():
     # 匹配粘贴的url地址
     # 解析抖音分享口令中的地址并返回列表
     def find(self, string):
+        # r_string = re.sub(r"\n", "", string)
         url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
         return url
 
@@ -121,6 +125,22 @@ class TuKu():
         filename = new_title
         return filename
 
+    # 判断是否已经下载过
+    def cheak_info(self, cheak_file, img_info):
+        try:
+            if cheak_file in img_info:
+                print('[  提示  ]:', cheak_file, '[文件已存在，为您跳过]', end="")  # 开始下载，显示下载文件大小
+                for i in range(20):
+                    print(">", end='', flush=True)
+                    time.sleep(0.01)
+                print('\r')
+                self.jump = "yes"
+                return self.jump
+        except Exception as e:
+            print(e)
+            pass
+
+    '''
     # 对图片进行转换
     def conversion(self):
         img_list = os.listdir(self.save)
@@ -129,13 +149,39 @@ class TuKu():
             info = os.path.splitext(filename)
             if info[1] != '.png':
                 png = img.open(self.save + filename)
-                temp = info[0].split('.')  # 在 ‘.’ 处分割字符串
-                png.save(self.save + temp[0] + ".png")  # 转换jpg格式就写 “.jpg”
+                # temp = info[0].split('.')  # 在 ‘.’ 处分割字符串
+                # png.save(self.save + temp[0] + ".png")  # 转换jpg格式就写 “.jpg”
+                png.save(self.save + info[0] + ".png")
             time.sleep(0.1)
             if info[1] == '.webp':
                 path = self.save + "\\" + filename
                 os.remove(path)
+            # time.sleep(0.1)
+        print('[  提示  ]:转码完成！')
+    '''
+    def conversion(self):
+        print('[  提示  ]:转码中......')
+        img_list = os.listdir(self.save)
+        new_img_list = []
+        for m in img_list:
+            m_temp = os.path.splitext(m)
+            if m_temp[1] != '.png':
+                new_img_list.append(m)
+        for n, filename in tqdm(enumerate(new_img_list), total=len(new_img_list)):
+            # print(filename)
+            info = os.path.splitext(filename)
+            if info[1] != '.png':
+                png = img.open(self.save + filename)
+                # temp = info[0].split('.')  # 在 ‘.’ 处分割字符串
+                # png.save(self.save + temp[0] + ".png")  # 转换jpg格式就写 “.jpg”
+                png.save(self.save + info[0] + ".png")
             time.sleep(0.1)
+            if info[1] == '.webp':
+                path = self.save + "\\" + filename
+                os.remove(path)
+            # time.sleep(0.1)
+        print('[  提示  ]:转码完成！')
+
     # 处理url
     def judge_link(self):
         try:
@@ -143,13 +189,14 @@ class TuKu():
             total_urls = len(url_list)
             print('[  提示  ]:本次共有%d个链接\r' % total_urls)
             for counts in range(len(url_list)):
-                count = 0
                 count = counts + 1
                 time.sleep(0.3)
                 print('>' * 120)
                 print('-' * 120)
                 print('当前为%d个链接\r' % count)
                 self.get_info(url_list[counts])
+                if self.jump == "yes":
+                    continue
                 self.conversion()
         except Exception as e:
             self.error_do(e, 'judge_link', url_list)
@@ -181,16 +228,19 @@ class TuKu():
                 image_data = js['item_list'][0]['images']
                 # 图集背景音频
                 image_music = str(js['item_list'][0]['music']['play_url']['url_list'][0])
+                # 创建时间
+                image_creat_time = time.strftime("%Y-%m-%d %H.%M.%S", time.localtime(js['item_list'][0]['create_time']))
                 # 图集标题
                 image_title = str(js['item_list'][0]['desc'])
                 # 第一次处理名称
                 new_image_title = ''.join(image_title.splitlines())
-                '''
+
                 if len(new_image_title) > 182:
                     print("[  提示  ]:", "文件名称太长 进行截取")
-                    new_image_title = image_title[0:180]
-                    print("[  提示  ]:", "截取后的文案：{0}，长度：{1}".format(new_image_title], len(new_image_title)))
-                '''
+                    new_image_title = new_image_title[0:180]
+                    # print("[  提示  ]:", "截取后的文案：{0}，长度：{1}".format(new_image_title], len(new_image_title)))
+                    print(new_image_title)
+                    print(len(new_image_title))
                 # 图集作者昵称
                 image_author = str(js['item_list'][0]['author']['nickname'])
                 # 图集作者抖音号
@@ -204,10 +254,11 @@ class TuKu():
                     images_url.append(data['url_list'][0])
                 # 图片数量
                 image_num = len(images_url)
-                image_info = [images_url, image_music, image_title, image_author, image_author_id, original_url, image_num,new_image_title]
+                image_info = [images_url, image_music, image_title, image_author, image_author_id, original_url, image_num,new_image_title,image_creat_time]
                 # 输出具体信息
                 print("作品信息")
                 print("文案：" + image_title)
+                print("发布时间：" + image_creat_time)
                 print("作者昵称：" + image_author)
                 print("作者id：" + image_author_id)
                 print('图片数量：%d张\r' % image_num)
@@ -216,7 +267,8 @@ class TuKu():
                 self.image_download(image_info,images_url)
                 return self, image_info, images_url, api_url
             except:
-                print("当前链接非图片链接，请确认后再解析！")
+                # print(e)
+                print("当前链接有误，请确认后再解析！")
         except Exception as e:
             self.error_do(e, 'get_info', original_url)
 
@@ -228,39 +280,52 @@ class TuKu():
             except:
                 pass
             # 尝试下载图片
+            img_info = os.listdir((self.save))
             for i in range(len(image_url)):
+                a = i + 1
+                filename = self.clean_filename(image_info[7]) + '%s' % a + '.webp'
+                cheak_file =self.clean_filename(image_info[7]) + '%s' % a + '.png'
+                self.cheak_info(cheak_file,img_info)
+                # print(self.jump)
+                if self.jump == "yes":
+                    continue
+                '''
+                # 判断是否已经下载过
+                if cheak_file in img_info:
+                    print('[  提示  ]:', cheak_file, '[文件已存在，为您跳过]', end="")
+                    for i in range(20):
+                        print(">", end='', flush=True)
+                        time.sleep(0.01)
+                    print('\r')
+                    continue
+                '''
+                image = requests.get(image_url[i])
+                start = time.time()  # 下载开始时间
+                size = 0  # 初始化已下载大小
+                chunk_size = 1024  # 每次下载的数据大小
+                content_size = int(image.headers['content-length'])  # 下载文件总大小
                 try:
-                    a = i + 1
-                    image = requests.get(image_url[i])
-                    start = time.time()                                  # 下载开始时间
-                    size = 0                                             # 初始化已下载大小
-                    chunk_size = 1024                                    # 每次下载的数据大小
-                    content_size = int(image.headers['content-length'])  # 下载文件总大小
-                    try:
-                        if image.status_code == 200:  # 判断是否响应成功
-                            print('[  图片  ]:' + image_info[2] + '%s'%a + '[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024))  # 开始下载，显示下载文件大小
-                            v_url = self.save + "\\" + self.clean_filename(image_info[7]) + '%s'%a + '.webp'
-                            with open(v_url, 'wb') as file:  # 显示进度条
-                                for data in image.iter_content(chunk_size=chunk_size):
-                                    file.write(data)
-                                    size += len(data)
-                                    print('\r' + '[下载进度]:%s%.2f%%' % (
-                                        '>' * int(size * 50 / content_size), float(size / content_size * 100)), end=' ')
-                                end = time.time()  # 下载结束时间
-                                print('\n' + '[下载完成]:耗时: %.2f秒\n' % (
-                                        end - start))  # 输出下载用时时间
-                    except Exception as e:
-                        print(e)
-                        print('----[  警告  ]:图片下载出错!')
-                        print('----[  警告  ]:', e, '\r')
-
-                except Exception as e :
-                    pass
+                    if image.status_code == 200:  # 判断是否响应成功
+                        # 文件命名是否带 创建时间
+                        # print('[  图片  ]:' + image_info[8] + ' ' + image_info[2] + '%s'%a + '[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024))  # 开始下载，显示下载文件大小
+                        # img_url = self.save + "\\" filename
+                        print('[  图片  ]:' + image_info[2] + '%s' % a + '[文件 大小]:{size:.2f} MB'.format(
+                            size=content_size / chunk_size / 1024))  # 开始下载，显示下载文件大小
+                        img_url = self.save + "\\" + filename
+                        with open(img_url, 'wb') as file:  # 显示进度条
+                            for data in image.iter_content(chunk_size=chunk_size):
+                                file.write(data)
+                                size += len(data)
+                                print('\r' + '[下载进度]:%s%.2f%%' % (
+                                    '>' * int(size * 50 / content_size), float(size / content_size * 100)), end=' ')
+                            end = time.time()  # 下载结束时间
+                            print('\n' + '[下载完成]:耗时: %.2f秒\n' % (
+                                    end - start))  # 输出下载用时时间
+                except Exception as e:
+                    print('----[  警告  ]:图片下载出错!')
+                    print('----[  警告  ]:', e, '\r')
         except Exception as e:
             self.error_do(e, 'image_download')
-
-
-
 
 
 if __name__ == "__main__":
