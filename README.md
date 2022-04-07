@@ -5,6 +5,8 @@
 运行TuKuDownload.py 文件
 
 记得导入库
+pip install pillow
+pip install tqdm
 
 在 conf.ini 可以直接粘贴多个url（如果运行失败，请手动把换行符删掉）
 
