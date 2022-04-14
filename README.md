@@ -2,6 +2,9 @@
 
 抖音图库解析下载
 
+新添加GUI界面
+下载GUI 运行exe文件即可
+
 运行TuKuDownload.py 文件
 
 记得导入库
