@@ -3,7 +3,8 @@
 抖音图库解析下载
 
 新添加GUI界面
-Releases下载 运行exe文件即可
+GUI版本支持 视频解析下载
+Releases下载最新版本 运行exe文件即可
 
 运行TuKuDownload.py 文件
 
