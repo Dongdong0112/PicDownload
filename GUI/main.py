@@ -7,7 +7,6 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from maingui import Ui_MainPage
 
-
 class MyMainForm(QMainWindow, Ui_MainPage):
     def __init__(self, parent=None):
         super(MyMainForm, self).__init__(parent)
