@@ -7,7 +7,6 @@
 @version    :1.1.3
 @License    :(C)Copyright 2021-2022
 @Mail       :2638415826@qq.com
-@WeChat     :ZhangHiDg
 '''
 
 import argparse
