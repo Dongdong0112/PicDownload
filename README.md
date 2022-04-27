@@ -16,4 +16,3 @@ pip install tqdm
 
 有问题 请留言
 
-目前只可以解析图片
